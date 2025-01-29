@@ -1,23 +1,20 @@
-def count_paths_with_restriction(n, k):
-    if k > (n + 1) // 2:  # Невозможно пройти с таким ограничением
-        return 0
-    dp = [[0] * (k + 1) for _ in range(n + 1)]
-    dp[0][0] = 1  # Стартовая точка
+def count_restricted_paths(m, n):
+    right = [0] * (n + 1)
+    up = [0] * (n + 1)
+    right[0] = 1  # Начальная клетка
 
-    for i in range(n + 1):
-        for j in range(k + 1):
-            if i > 0:
-                dp[i][j] += dp[i - 1][j]  # Горизонтальный шаг
-            if i > 0 and j > 0:
-                dp[i][j] += dp[i - 1][j - 1]  # Вертикальный шаг, но не два подряд
+    for _ in range(m + 1):
+        new_right = [0] * (n + 1)
+        new_up = [0] * (n + 1)
+        for j in range(n + 1):
+            if j == 0:
+                new_right[j] = right[j] + up[j]
+            else:
+                new_right[j] = right[j] + up[j]
+                new_up[j] = new_right[j - 1]
+        right, up = new_right, new_up
 
-    return dp[n][k]
+    return right[n] + up[n]
 
-
-# Размеры сетки
-n, k = 18, 15
-
-# Количество кратчайших путей с ограничением
-paths_with_restriction = count_paths_with_restriction(n, k)
-
-print("Кратчайших путей с ограничением (без двух подряд вертикальных шагов):", paths_with_restriction)
+# Для сетки 18x15 клеток (m=18, n=15)
+print(count_restricted_paths(18, 15))
