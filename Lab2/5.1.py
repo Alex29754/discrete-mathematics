@@ -1,9 +1,29 @@
-from math import comb
+# from math import comb
+#
+# # Размеры сетки
+# n, k = 18, 15
+#
+# # Количество кратчайших путей
+# paths_no_restrictions = comb(n + k, k)
+#
+# print("Кратчайших путей без ограничений:", paths_no_restrictions)
+# #
+def count_paths(m, n):
+    dp = [[0] * (n + 1) for _ in range(m + 1)]
+    dp[0][0] = 1
 
-# Размеры сетки
-n, k = 18, 15
+    for i in range(m + 1):
+        for j in range(n + 1):
+            if i > 0:
+                dp[i][j] += dp[i-1][j]  # Горизонтальный шаг
+            if j > 0:
+                if i == 0:
+                    dp[i][j] += dp[i][j-1]  # Вертикальный шаг, если это первый ряд
+                else:
+                    dp[i][j] += dp[i][j-1]  # Вертикальный шаг, если предыдущий шаг не был вертикальным
 
-# Количество кратчайших путей
-paths_no_restrictions = comb(n + k, k)
+    return dp[m][n]
 
-print("Кратчайших путей без ограничений:", paths_no_restrictions)
+m = 18
+n = 15
+print(count_paths(m, n))
