@@ -1,36 +1,31 @@
-from collections import Counter
-import re
+from collections import defaultdict, Counter
+import string
 
-def read_text(filename):
-    with open(filename, 'r', encoding='utf-8') as f:
-        text = f.read().lower()  # Приводим к нижнему регистру
-    text = re.sub(r'[^a-z ]', '', text)  # Убираем все кроме букв и пробела
-    return text
+# Чтение текста из файла
+with open('text.txt', 'r', encoding='utf-8') as file:
+    text = file.read()
 
-def frequency_analysis(text):
-    letter_counts = Counter(text)
-    total_letters = sum(letter_counts.values())
+# Приведение текста к нижнему регистру для упрощения анализа
+text = text.lower()
 
-    pair_counts = Counter(text[i:i+2] for i in range(len(text)-1))
-    total_pairs = sum(pair_counts.values())
+# Удаление всех символов, кроме букв и пробелов
+allowed_chars = string.ascii_lowercase + ' '
+text = ''.join([char for char in text if char in allowed_chars])
 
-    letter_freqs = {char: count / total_letters for char, count in letter_counts.items()}
-    pair_freqs = {pair: count / total_pairs for pair, count in pair_counts.items()}
+# Статистика по частоте букв
+letter_frequency = Counter(text)
 
-    return letter_freqs, pair_freqs
-
-# Загрузка текста
-filename = "text.txt"  # Имя файла с текстом
-text = read_text(filename)
-
-# Анализ частот
-letter_freqs, pair_freqs = frequency_analysis(text)
+# Статистика по частоте пар букв
+pair_frequency = defaultdict(int)
+for i in range(len(text) - 1):
+    pair = text[i:i+2]
+    pair_frequency[pair] += 1
 
 # Вывод результатов
-print("Частоты букв:")
-for letter, freq in sorted(letter_freqs.items(), key=lambda x: -x[1]):
-    print(f"{letter}: {freq:.4f}")
+print("Частота букв:")
+for letter, freq in letter_frequency.items():
+    print(f"{letter}: {freq}")
 
-print("\nЧастоты пар букв:")
-for pair, freq in sorted(pair_freqs.items(), key=lambda x: -x[1])[:10]:  # Топ-10 пар
-    print(f"{pair}: {freq:.4f}")
+print("\nЧастота пар букв:")
+for pair, freq in pair_frequency.items():
+    print(f"{pair}: {freq}")

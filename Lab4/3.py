@@ -1,114 +1,70 @@
-import heapq
-import re
-from collections import Counter
+# Функция для кодирования текста с использованием алгоритма LZW
+def lzw_encode(text):
+    # Инициализация словаря с отдельными символами
+    dict_size = 256
+    dictionary = {chr(i): i for i in range(dict_size)}
 
-# Функция для чтения текста из файла
-def read_text(filename):
-    with open(filename, 'r', encoding='utf-8') as f:
-        text = f.read().lower()  # Приводим к нижнему регистру
-    text = re.sub(r'[^a-z ]', '', text)  # Оставляем только латинские буквы и пробел
-    return text
+    # Переменные для хранения текущей строки и результата
+    current_string = ""
+    encoded_data = []
 
-# 1. Частотный анализ
-def frequency_analysis(text):
-    letter_counts = Counter(text)
-    total_letters = sum(letter_counts.values())
-
-    pair_counts = Counter(text[i:i+2] for i in range(len(text)-1))
-    total_pairs = sum(pair_counts.values())
-
-    letter_freqs = {char: count / total_letters for char, count in letter_counts.items()}
-    pair_freqs = {pair: count / total_pairs for pair, count in pair_counts.items()}
-
-    return letter_freqs, pair_freqs
-
-# 2. Кодирование Хаффмана
-class Node:
-    def __init__(self, char, freq):
-        self.char = char
-        self.freq = freq
-        self.left = None
-        self.right = None
-
-    def __lt__(self, other):
-        return self.freq < other.freq
-
-def build_huffman_tree(frequencies):
-    heap = [Node(char, freq) for char, freq in frequencies.items()]
-    heapq.heapify(heap)
-
-    while len(heap) > 1:
-        left = heapq.heappop(heap)
-        right = heapq.heappop(heap)
-        merged = Node(None, left.freq + right.freq)
-        merged.left = left
-        merged.right = right
-        heapq.heappush(heap, merged)
-
-    return heap[0]
-
-def generate_huffman_codes(node, prefix="", codebook={}):
-    if node:
-        if node.char:
-            codebook[node.char] = prefix
-        generate_huffman_codes(node.left, prefix + "0", codebook)
-        generate_huffman_codes(node.right, prefix + "1", codebook)
-    return codebook
-
-def encode_text(text, huffman_codes):
-    return ''.join(huffman_codes[char] for char in text)
-
-# 3. Кодирование LZW
-def lzw_compress(text):
-    dictionary = {chr(i): i for i in range(256)}  # Инициализируем словарь ASCII
-    next_code = 256
-    w = ""
-    compressed = []
-
-    for char in text:
-        wc = w + char
-        if wc in dictionary:
-            w = wc
+    # Проход по тексту
+    for symbol in text:
+        combined_string = current_string + symbol
+        if combined_string in dictionary:
+            current_string = combined_string
         else:
-            compressed.append(dictionary[w])
-            dictionary[wc] = next_code
-            next_code += 1
-            w = char
+            # Добавляем код текущей строки в результат
+            encoded_data.append(dictionary[current_string])
+            # Добавляем новую строку в словарь
+            dictionary[combined_string] = dict_size
+            dict_size += 1
+            current_string = symbol
 
-    if w:
-        compressed.append(dictionary[w])  # Записываем оставшуюся строку
+    # Добавляем код последней строки
+    if current_string:
+        encoded_data.append(dictionary[current_string])
 
-    return compressed
+    return encoded_data
 
-# --- Основная часть программы ---
-filename = "text.txt"  # Укажи путь к файлу с текстом
-text = read_text(filename)
 
-# 1. Анализ частот
-letter_freqs, pair_freqs = frequency_analysis(text)
+# Функция для вычисления количества бит после кодирования LZW
+def calculate_lzw_bits(encoded_data):
+    # Определяем максимальное значение в encoded_data
+    max_value = max(encoded_data) if encoded_data else 0
+    # Вычисляем количество бит, необходимых для хранения каждого числа
+    bits_per_code = max_value.bit_length() if max_value > 0 else 1
+    # Общее количество бит
+    total_bits = len(encoded_data) * bits_per_code
+    return total_bits
 
-# 2. Кодирование Хаффмана
-huffman_tree = build_huffman_tree(letter_freqs)
-huffman_codes = generate_huffman_codes(huffman_tree)
-encoded_huffman = encode_text(text, huffman_codes)
 
-# 3. Кодирование LZW
-encoded_lzw = lzw_compress(text)
+# Чтение текста из файла
+with open('text.txt', 'r', encoding='utf-8') as file:
+    text = file.read()
 
-# --- Вывод результатов ---
-print("\nЧастоты букв:")
-for letter, freq in sorted(letter_freqs.items(), key=lambda x: -x[1]):
-    print(f"{letter}: {freq:.4f}")
+# Приведение текста к нижнему регистру и удаление лишних символов
+text = text.lower()
+allowed_chars = set('abcdefghijklmnopqrstuvwxyz ')
+text = ''.join([char for char in text if char in allowed_chars])
 
-print("\nЧастоты пар букв:")
-for pair, freq in sorted(pair_freqs.items(), key=lambda x: -x[1])[:10]:  # Топ-10 пар
-    print(f"{pair}: {freq:.4f}")
+# Кодирование текста с использованием LZW
+encoded_data = lzw_encode(text)
+lzw_bits = calculate_lzw_bits(encoded_data)
 
-print("\nКоды Хаффмана:")
-for char, code in huffman_codes.items():
-    print(f"{char}: {code}")
+# Подсчёт количества бит для равномерных кодов и кодов Хаффмана
+total_chars = len(text)
+uniform_bits = total_chars * 6  # 6 бит на символ
 
-print(f"\nЗакодированный текст Хаффмана (первые 100 бит): {encoded_huffman[:100]}")
 
-print("\nЗакодированный текст LZW (первые 20 кодов):", encoded_lzw[:20])
-print(f"Длина закодированного текста LZW: {len(encoded_lzw)}")
+huffman_bits = 63420  # Замените на значение из второго задания
+
+# Вывод результатов
+print(f"Количество бит (равномерные 6-битовые коды): {uniform_bits}")
+print(f"Количество бит (коды Хаффмана): {huffman_bits}")
+print(f"Количество бит (LZW): {lzw_bits}")
+
+# Сравнение результатов
+print("\nСравнение:")
+print(f"LZW vs равномерные коды: {lzw_bits} бит vs {uniform_bits} бит")
+print(f"LZW vs Хаффман: {lzw_bits} бит vs {huffman_bits} бит")

@@ -1,91 +1,82 @@
 import heapq
-import re
 from collections import Counter
+import math
 
-# Функция для чтения текста из файла
-def read_text(filename):
-    with open(filename, 'r', encoding='utf-8') as f:
-        text = f.read().lower()  # Приводим к нижнему регистру
-    text = re.sub(r'[^a-z ]', '', text)  # Убираем все кроме букв и пробела
-    return text
 
-# Функция для анализа частот букв и пар букв
-def frequency_analysis(text):
-    letter_counts = Counter(text)
-    total_letters = sum(letter_counts.values())
-
-    pair_counts = Counter(text[i:i+2] for i in range(len(text)-1))
-    total_pairs = sum(pair_counts.values())
-
-    letter_freqs = {char: count / total_letters for char, count in letter_counts.items()}
-    pair_freqs = {pair: count / total_pairs for pair, count in pair_counts.items()}
-
-    return letter_freqs, pair_freqs
-
-# Класс узла для дерева Хаффмана
-class Node:
-    def __init__(self, char, freq):
-        self.char = char
-        self.freq = freq
-        self.left = None
-        self.right = None
-
-    def __lt__(self, other):
-        return self.freq < other.freq
-
-# Функция для построения дерева Хаффмана
-def build_huffman_tree(frequencies):
-    heap = [Node(char, freq) for char, freq in frequencies.items()]
+# Функция для построения кодов Хаффмана
+def build_huffman_codes(freq):
+    heap = [[weight, [char, ""]] for char, weight in freq.items()]
     heapq.heapify(heap)
 
     while len(heap) > 1:
-        left = heapq.heappop(heap)
-        right = heapq.heappop(heap)
-        merged = Node(None, left.freq + right.freq)
-        merged.left = left
-        merged.right = right
-        heapq.heappush(heap, merged)
+        lo = heapq.heappop(heap)
+        hi = heapq.heappop(heap)
+        for pair in lo[1:]:
+            pair[1] = '0' + pair[1]
+        for pair in hi[1:]:
+            pair[1] = '1' + pair[1]
+        heapq.heappush(heap, [lo[0] + hi[0]] + lo[1:] + hi[1:])
 
-    return heap[0]
+    huffman_codes = dict(heapq.heappop(heap)[1:])
+    return huffman_codes
 
-# Функция для генерации кодов Хаффмана
-def generate_huffman_codes(node, prefix="", codebook={}):
-    if node:
-        if node.char:
-            codebook[node.char] = prefix
-        generate_huffman_codes(node.left, prefix + "0", codebook)
-        generate_huffman_codes(node.right, prefix + "1", codebook)
-    return codebook
 
 # Функция для кодирования текста с использованием кодов Хаффмана
-def encode_text(text, huffman_codes):
-    return ''.join(huffman_codes[char] for char in text)
+def huffman_encode(text, codes):
+    return ''.join([codes[char] for char in text])
 
-# --- Основная часть программы ---
-filename = "text.txt"  # Укажи путь к файлу с текстом
-text = read_text(filename)
 
-# 1. Анализ частот
-letter_freqs, pair_freqs = frequency_analysis(text)
+# Функция для расчёта количества информации по формуле Шеннона
+def shannon_entropy(freq, total):
+    return -sum((f / total) * math.log2(f / total) for f in freq.values())
 
-# 2. Построение кодов Хаффмана
-huffman_tree = build_huffman_tree(letter_freqs)
-huffman_codes = generate_huffman_codes(huffman_tree)
 
-# Кодирование текста
-encoded_text = encode_text(text, huffman_codes)
+# Чтение текста из файла
+with open('text.txt', 'r', encoding='utf-8') as file:
+    text = file.read()
 
-# Вывод результатов
-print("\nЧастоты букв:")
-for letter, freq in sorted(letter_freqs.items(), key=lambda x: -x[1]):
-    print(f"{letter}: {freq:.4f}")
+# Приведение текста к нижнему регистру и удаление лишних символов
+text = text.lower()
+allowed_chars = set('abcdefghijklmnopqrstuvwxyz ')
+text = ''.join([char for char in text if char in allowed_chars])
 
-print("\nЧастоты пар букв:")
-for pair, freq in sorted(pair_freqs.items(), key=lambda x: -x[1])[:10]:  # Топ-10 пар
-    print(f"{pair}: {freq:.4f}")
+# Подсчёт количественной частоты символов (первая задача)
+letter_frequency = Counter(text)
+total_chars = len(text)
 
+# Вывод результатов первой задачи
+print("Частота символов:")
+for char, freq in letter_frequency.items():
+    print(f"{char}: {freq}")
+
+# Построение кодов Хаффмана (вторая задача)
+huffman_codes = build_huffman_codes(letter_frequency)
+
+# Кодирование текста с использованием кодов Хаффмана
+encoded_text = huffman_encode(text, huffman_codes)
+huffman_bits = len(encoded_text)
+
+# Кодирование текста с использованием равномерных 6-битовых кодов
+uniform_bits = total_chars * 6
+
+# Расчёт количества информации по формуле Шеннона
+entropy = shannon_entropy(letter_frequency, total_chars)
+shannon_bits = entropy * total_chars
+
+# Вывод результатов второй задачи
 print("\nКоды Хаффмана:")
 for char, code in huffman_codes.items():
     print(f"{char}: {code}")
 
-print(f"\nЗакодированный текст (первые 100 бит): {encoded_text[:100]}")
+print(f"\nЗакодированный текст (Хаффман): {encoded_text}")
+print(f"Количество бит (Хаффман): {huffman_bits}")
+
+print(f"\nКоличество бит (равномерные 6-битовые коды): {uniform_bits}")
+
+print(f"\nЭнтропия по Шеннону: {entropy:.4f} бит/символ")
+print(f"Количество информации по Шеннону: {shannon_bits:.4f} бит")
+
+# Сравнение результатов
+print("\nСравнение:")
+print(f"Хаффман vs равномерные коды: {huffman_bits} бит vs {uniform_bits} бит")
+print(f"Хаффман vs Шеннон: {huffman_bits} бит vs {shannon_bits:.4f} бит")
