@@ -1,0 +1,53 @@
+    def generate_error_examples(self):
+        message = np.array([1] + [0] * (self.k - 1), dtype=int)
+        codeword = self.encode(message)
+
+        print("\n3. Примеры, иллюстрирующие свойства кода:")
+
+        # Пример 1: одиночная ошибка
+        error1 = np.zeros(self.n, dtype=int)
+        error1[5] = 1
+        received1 = (codeword + error1) % 2
+        detected1, _ = self.decode(received1)
+        print(f"\nПример 1: Обнаружение одиночной ошибки")
+        print(f"Вектор ошибки:     {error1}")
+        print(f"Принятое слово:     {received1}")
+        print(f"Ошибка обнаружена: {detected1}")
+
+        # Пример 2: две ошибки
+        error2 = np.zeros(self.n, dtype=int)
+        error2[5] = 1
+        error2[10] = 1
+        received2 = (codeword + error2) % 2
+        detected2, _ = self.decode(received2)
+        print(f"\nПример 2: Обнаружение двух ошибок")
+        print(f"Вектор ошибки:     {error2}")
+        print(f"Принятое слово:     {received2}")
+        print(f"Ошибка обнаружена: {detected2}")
+
+        # Пример 3: три ошибки (обнаруживаются, но не исправляются)
+        error3 = np.zeros(self.n, dtype=int)
+        error3[5] = 1
+        error3[10] = 1
+        error3[15] = 1
+        received3 = (codeword + error3) % 2
+        detected3, _ = self.decode(received3)
+        print(f"\nПример 3: Ошибка, которую можно обнаружить, но не исправить")
+        print(f"Вектор ошибки:     {error3}")
+        print(f"Принятое слово:     {received3}")
+        print(f"Ошибка обнаружена: {detected3}")
+
+        # Пример 4: ошибка не обнаруживается (демонстрация слабости кода)
+        # Используем другое сообщение, кодируем его, и считаем разницу как "ошибку"
+        other_message = np.array([0, 1] + [0] * (self.k - 2), dtype=int)
+        other_codeword = self.encode(other_message)
+        undetected_error = (codeword + other_codeword) % 2
+        received4 = other_codeword
+        detected4, _ = self.decode(received4)
+
+        print(f"\nПример 4: Ошибка, которая НЕ обнаруживается (демонстрация слабости кода)")
+        print(f"Исходное сообщение:       {message}")
+        print(f"Другое допустимое слово:  {other_codeword}")
+        print(f"Вектор ошибки (XOR):      {undetected_error}")
+        print(f"Принятое слово:           {received4}")
+        print(f"Ошибка обнаружена:        {detected4} (ожидается False)")
